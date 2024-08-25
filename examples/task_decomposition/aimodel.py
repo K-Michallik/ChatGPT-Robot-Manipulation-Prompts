@@ -30,20 +30,9 @@ class ChatGPT:
             self,
             credentials,
             prompt_load_order,
-            use_azure=True,
             api_version='2023-05-15'):
-        self.use_azure = use_azure
-        if self.use_azure:
-            openai.api_key = credentials["azureopenai"]["AZURE_OPENAI_KEY"]
-            openai.api_base = credentials["azureopenai"]["AZURE_OPENAI_ENDPOINT"]
-            openai.api_type = 'azure'
-            if api_version not in self.VALID_API_VERSIONS:
-                raise ValueError(
-                    f'api_version must be one of {self.VALID_API_VERSIONS}')
-            openai.api_version = api_version
-        else:
-            openai.organization = credentials["openai"]["YOUR_ORG_ID"]
-            openai.api_key = credentials["openai"]["OPENAI_API_KEY"]
+        openai.organization = credentials["openai"]["YOUR_ORG_ID"]
+        openai.api_key = credentials["openai"]["OPENAI_API_KEY"]
 
         self.credentials = credentials
         self.messages = []
@@ -63,11 +52,11 @@ class ChatGPT:
             fp_prompt = os.path.join(dir_prompt, prompt_name + '.txt')
             with open(fp_prompt) as f:
                 data = f.read()
-            data_spilit = re.split(r'\[user\]\n|\[assistant\]\n', data)
-            data_spilit = [item for item in data_spilit if len(item) != 0]
-            # it start with user and ends with system
-            assert len(data_spilit) % 2 == 0
-            for i, item in enumerate(data_spilit):
+            data_split = re.split(r'\[user\]\n|\[assistant\]\n', data)
+            data_split = [item for item in data_split if len(item) != 0]
+            # it starts with user and ends with system
+            assert len(data_split) % 2 == 0
+            for i, item in enumerate(data_split):
                 if i % 2 == 0:
                     self.messages.append({"sender": "user", "text": item})
                 else:
@@ -79,37 +68,22 @@ class ChatGPT:
     # See
     # https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/chatgpt#chatml
     def create_prompt(self):
-        prompt = ""
-        if self.use_azure and openai.api_version == '2022-12-01':
-            prompt = "<|im_start|>system\n"
-            prompt += self.system_message["content"]
-            prompt += "\n<|im_end|>\n"
-            for message in self.messages:
-                prompt += f"\n<|im_start|>{message['sender']}\n{message['text']}\n<|im_end|>"
-            prompt += "\n<|im_start|>assistant\n"
-            print('prompt length: ' + str(len(enc.encode(prompt))))
-            if len(enc.encode(prompt)) > self.max_token_length - \
-                    self.max_completion_length:
-                print('prompt too long. truncated.')
-                # truncate the prompt by removing the oldest two messages
-                self.messages = self.messages[2:]
-                prompt = self.create_prompt()
-        else:
-            prompt = []
-            prompt.append(self.system_message)
-            for message in self.messages:
-                prompt.append(
-                    {"role": message['sender'], "content": message['text']})
-            prompt_content = ""
-            for message in prompt:
-                prompt_content += message["content"]
-            print('prompt length: ' + str(len(enc.encode(prompt_content))))
-            if len(enc.encode(prompt_content)) > self.max_token_length - \
-                    self.max_completion_length:
-                print('prompt too long. truncated.')
-                # truncate the prompt by removing the oldest two messages
-                self.messages = self.messages[2:]
-                prompt = self.create_prompt()
+        prompt = []
+        prompt.append(self.system_message)
+        print(self.messages)
+        for message in self.messages:
+            prompt.append(
+                {"role": message['sender'], "content": message['text']})
+        prompt_content = ""
+        for message in prompt:
+            prompt_content += message["content"]
+        print('prompt length: ' + str(len(enc.encode(prompt_content))))
+        if len(enc.encode(prompt_content)) > self.max_token_length - \
+                self.max_completion_length:
+            print('prompt too long. truncated.')
+            # truncate the prompt by removing the oldest two messages
+            self.messages = self.messages[2:]
+            prompt = self.create_prompt()
         return prompt
 
     def extract_json_part(self, text):
@@ -136,38 +110,8 @@ class ChatGPT:
                 self.instruction = text_base
             self.messages.append({'sender': 'user', 'text': text_base})
 
-        if self.use_azure and openai.api_version == '2022-12-01':
-            # Remove unsafe user inputs. May need further refinement in the
-            # future.
-            if message.find('<|im_start|>') != -1:
-                message = message.replace('<|im_start|>', '')
-            if message.find('<|im_end|>') != -1:
-                message = message.replace('<|im_end|>', '')
-            deployment_name = self.credentials["azureopenai"]["AZURE_OPENAI_DEPLOYMENT_NAME_CHATGPT"]
-            response = openai.Completion.create(
-                engine=deployment_name,
-                prompt=self.create_prompt(),
-                temperature=0.1,
-                max_tokens=self.max_completion_length,
-                top_p=0.5,
-                frequency_penalty=0.0,
-                presence_penalty=0.0,
-                stop=["<|im_end|>"])
-            text = response['choices'][0]['text']
-        elif self.use_azure and openai.api_version == '2023-05-15':
-            deployment_name = self.credentials["azureopenai"]["AZURE_OPENAI_DEPLOYMENT_NAME_CHATGPT"]
             response = openai.ChatCompletion.create(
-                engine=deployment_name,
-                messages=self.create_prompt(),
-                temperature=0.1,
-                max_tokens=self.max_completion_length,
-                top_p=0.5,
-                frequency_penalty=0.0,
-                presence_penalty=0.0)
-            text = response['choices'][0]['message']['content']
-        else:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-16k",
+                model="gpt-4o-mini",
                 # "gpt-4" is available, too. Check the available models in https://platform.openai.com/docs/models/
                 messages=self.create_prompt(),
                 temperature=0.1,
@@ -176,6 +120,7 @@ class ChatGPT:
                 frequency_penalty=0.0,
                 presence_penalty=0.0)
             text = response['choices'][0].message.content
+
         print(text)
         self.last_response = text
         self.last_response = self.extract_json_part(self.last_response)
@@ -298,32 +243,34 @@ if __name__ == "__main__":
             'Get the sponge from the table and wipe the window with it. After that, put the sponge back on the table',
             'Throw away the sponge on the table']
     else:
+        environment = None
+        instructions = None
         parser.error('Invalid scenario name:' + scenario_name)
 
     aimodel = ChatGPT(
         credentials,
         prompt_load_order=prompt_load_order,
-        use_azure=True,
         api_version='2022-12-01')
 
-    if not os.path.exists('./out/' + scenario_name):
-        os.makedirs('./out/' + scenario_name)
-    for i, instruction in enumerate(instructions):
-        print(json.dumps(environment))
-        text = aimodel.generate(
-            instruction,
-            environment,
-            is_user_feedback=False)
-        while True:
-            user_feedback = input(
-                'user feedback (return empty if satisfied): ')
-            if user_feedback == 'q':
-                exit()
-            if user_feedback != '':
-                text = aimodel.generate(
-                    user_feedback, environment, is_user_feedback=True)
-            else:
-                # update the current environment
-                environment = aimodel.environment
-                break
-        aimodel.dump_json(f'./out/{scenario_name}/{i}')
+
+    # if not os.path.exists('./out/' + scenario_name):
+    #     os.makedirs('./out/' + scenario_name)
+    # for i, instruction in enumerate(instructions):
+    #     print(json.dumps(environment))
+    #     text = aimodel.generate(
+    #         instruction,
+    #         environment,
+    #         is_user_feedback=False)
+    #     while True:
+    #         user_feedback = input(
+    #             'user feedback (return empty if satisfied): ')
+    #         if user_feedback == 'q':
+    #             exit()
+    #         if user_feedback != '':
+    #             text = aimodel.generate(
+    #                 user_feedback, environment, is_user_feedback=True)
+    #         else:
+    #             # update the current environment
+    #             environment = aimodel.environment
+    #             break
+    #     aimodel.dump_json(f'./out/{scenario_name}/{i}')
