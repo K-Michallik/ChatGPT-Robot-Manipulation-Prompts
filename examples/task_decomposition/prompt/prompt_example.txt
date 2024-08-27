@@ -3,13 +3,12 @@ I will give you some examples of the input and the output you will generate.
 Example 1:
 """
 - Input:
-{"assets":["<table>", "<shelf_bottom>", "<shelf_top>", "<trash_bin>", "<floor>"],
-"asset_states": {"<shelf_bottom>": "on_something(<table>)", 
-                "<trash_bin>": "on_something(<floor>)"},
-"objects": ["<spam>", "<juice>"],
-"object_states": {"<spam>": "on_something(<table>)", 
-            "<juice>": "on_something(<shelf_bottom>)"},
-"instruction": "Put the juice on top of the shelf"}
+{"assets":["<table>", "<shelf_left>", "<shelf_right>"],
+"asset_states": {"<shelf_left>": "on_something(<table>)",
+                "<shelf_right>": "on_something(<table>)"},
+    "objects": ["<cylinder>"],
+    "object_states": {"<cylinder>": "on_something(<table>)"}}}
+"instruction": "Put the cylinder on top of the left shelf"}
 - Output:
 ```
 {"task_cohesion": {

@@ -253,24 +253,24 @@ if __name__ == "__main__":
         api_version='2022-12-01')
 
 
-    # if not os.path.exists('./out/' + scenario_name):
-    #     os.makedirs('./out/' + scenario_name)
-    # for i, instruction in enumerate(instructions):
-    #     print(json.dumps(environment))
-    #     text = aimodel.generate(
-    #         instruction,
-    #         environment,
-    #         is_user_feedback=False)
-    #     while True:
-    #         user_feedback = input(
-    #             'user feedback (return empty if satisfied): ')
-    #         if user_feedback == 'q':
-    #             exit()
-    #         if user_feedback != '':
-    #             text = aimodel.generate(
-    #                 user_feedback, environment, is_user_feedback=True)
-    #         else:
-    #             # update the current environment
-    #             environment = aimodel.environment
-    #             break
-    #     aimodel.dump_json(f'./out/{scenario_name}/{i}')
+    if not os.path.exists('./out/' + scenario_name):
+        os.makedirs('./out/' + scenario_name)
+    for i, instruction in enumerate(instructions):
+        print(json.dumps(environment))
+        text = aimodel.generate(
+            instruction,
+            environment,
+            is_user_feedback=False)
+        while True:
+            user_feedback = input(
+                'user feedback (return empty if satisfied): ')
+            if user_feedback == 'q':
+                exit()
+            if user_feedback != '':
+                text = aimodel.generate(
+                    user_feedback, environment, is_user_feedback=True)
+            else:
+                # update the current environment
+                environment = aimodel.environment
+                break
+        aimodel.dump_json(f'./out/{scenario_name}/{i}')

@@ -1,12 +1,11 @@
 [user]
 Information about environments and objects are given as python dictionary. Example:
 """
-{"environment":{"assets":["<table>", "<shelf_bottom>", "<shelf_top>", "<trash_bin>", "<floor>"],
-    "asset_states": {"<shelf_bottom>": "on_something(<table>)", 
-                    "<trash_bin>": "on_something(<floor>)"},
-    "objects": ["<spam>", "<juice>"],
-    "object_states": {"<spam>": "on_something(<table>)", 
-                "<juice>": "on_something(<shelf_bottom>)"}}}
+{"environment":{"assets":["<table>", "<shelf_left>", "<shelf_right>"],
+    "asset_states": {"<shelf_left>": "on_something(<table>)",
+                    "<shelf_right>": "on_something(<table>)"},
+    "objects": ["<cylinder>"],
+    "object_states": {"<cylinder>": "on_something(<table>)"}}}
 """
 Asset states and object states are represented using those state sets:
 """
